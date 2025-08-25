@@ -2,9 +2,10 @@ from datetime import datetime
 from typing import Annotated
 
 from fastapi import Depends, FastAPI, HTTPException, Query
-from sqlmodel import Field, Relationship, Session, SQLModel, create_engine, select, delete
+from sqlmodel import Field, Relationship, Session, SQLModel, create_engine, select, delete, func
 
 import random
+import scipy.stats as stats
 
 from prometheus_fastapi_instrumentator import Instrumentator
 
@@ -226,11 +227,30 @@ def read_transaction(transaction_id: int, session: SessionDep):
     raise HTTPException(status_code=404, detail="Transaction not found")
   return transaction
 
+def calculate_customer_character(CustomerID, session: SessionDep):
+  result = session.exec(
+      select(
+          func.avg(Transaction.Amount),
+          func.stddev(Transaction.Amount)
+      ).where(Transaction.CustomerID == CustomerID)
+  ).one_or_none()
+  return {
+    "AmountMean": result[0],
+    "AmountStd": result[1]
+  }
+
+
 @app.post("/transactions/verify")
 def verify_transaction(transaction: TransactionBase, session: SessionDep):
   db_transaction = Transaction.model_validate(transaction)
 
-  db_transaction.Accepted = db_transaction.Amount < 10
+  character = calculate_customer_character(db_transaction.CustomerID, session)
+  if character["AmountMean"] and character["AmountStd"]:
+    p = stats.norm.pdf(db_transaction.Amount, loc=character["AmountMean"], scale=character["AmountStd"])
+  else:
+    p = 1.0
+
+  db_transaction.Accepted = p > 0.001
 
   session.add(db_transaction)
   session.commit()
