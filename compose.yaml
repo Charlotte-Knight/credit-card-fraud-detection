@@ -1,0 +1,50 @@
+services:
+  postgres:
+    container_name: postgres
+    image: postgres
+    shm_size: 128mb
+    environment:
+      POSTGRES_PASSWORD: password
+    healthcheck:
+      test: pg_isready
+      start_period: 5s
+      start_interval: 5s
+
+  prometheus:
+    container_name: prometheus
+    image: prom/prometheus
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+    ports:
+      - 9090:9090
+
+  grafana:
+    container_name: grafana
+    image: grafana/grafana-oss
+    volumes:
+      - ./grafana/grafana-provisioning:/etc/grafana/provisioning
+    environment:
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_SECURITY_ADMIN_PASSWORD: password
+    ports:
+      - 3000:3000
+
+  fastapi:
+    container_name: fastapi
+    depends_on:
+      postgres:
+        condition: service_healthy
+        restart: true
+    build:
+      context: ./fastapi
+    ports:
+      - 80:80
+
+  synthetic_data:
+    container_name: synthetic_data
+    build:
+      context: ./synthetic_data
+    depends_on:
+      fastapi:
+        condition: service_healthy
+        restart: true

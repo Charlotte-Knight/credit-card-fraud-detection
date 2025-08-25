@@ -1,0 +1,13 @@
+apiVersion: 1
+
+datasources:
+  - name: Postgres
+    type: postgres
+    uid: postgres
+    url: postgres:5432
+    user: postgres
+    secureJsonData:
+      password: 'password'
+    jsonData:
+      database: postgres
+      sslmode: 'disable' # disable/require/verify-ca/verify-full
