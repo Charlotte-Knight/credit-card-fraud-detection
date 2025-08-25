@@ -1,4 +1,4 @@
 fastapi[standard]
 prometheus-fastapi-instrumentator
 sqlmodel
-psycopg2
+psycopg2-binary

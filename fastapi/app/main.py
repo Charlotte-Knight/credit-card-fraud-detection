@@ -38,6 +38,7 @@ class TransactionBase(SQLModel):
   Amount: float = Field(ge=0)
   Fraud: bool = False
   FraudScenario: int = 0
+  Accepted: bool | None = None
 
 class Transaction(TransactionBase, table=True):
   TransactionID: int | None = Field(default=None, primary_key=True)
@@ -224,6 +225,17 @@ def read_transaction(transaction_id: int, session: SessionDep):
   if not transaction:
     raise HTTPException(status_code=404, detail="Transaction not found")
   return transaction
+
+@app.post("/transactions/verify")
+def verify_transaction(transaction: TransactionBase, session: SessionDep):
+  db_transaction = Transaction.model_validate(transaction)
+
+  db_transaction.Accepted = db_transaction.Amount < 10
+
+  session.add(db_transaction)
+  session.commit()
+  session.refresh(db_transaction)
+  return db_transaction
 
 """----------------------------------------------------------------------------------------------"""
 
