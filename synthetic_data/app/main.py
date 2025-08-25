@@ -77,7 +77,7 @@ def generate_frauds(players: pd.DataFrame, time_info: TimeInfo,
   fraud_rate = len(players) * fraud_rate_fraction
 
   time_windows = generate_time_windows(fraud_rate, time_info)
-  characters = generate_transaction_characters(len(time_windows))
+  characters = generate_transaction_characters(len(time_windows), (5, 20), (5, 20))
 
   frauds = time_windows.join(characters)
   frauds[players.index.name] = np.random.choice(players.index, len(frauds))
@@ -126,6 +126,8 @@ def generate_fraudulent_customer_transactions(frauds: pd.DataFrame, terminals: p
 
   fraudulent_transactions = pd.concat(fraudulent_transactions, ignore_index=True)
   fraudulent_transactions["Fraud"] = True
+  transactions["FraudScenario"] = 1
+
 
   return fraudulent_transactions
 
@@ -145,6 +147,7 @@ def generate_fraudulent_terminal_transactions(frauds: pd.DataFrame, customers: p
 
   fraudulent_transactions = pd.concat(fraudulent_transactions, ignore_index=True)
   fraudulent_transactions["Fraud"] = True
+  transactions["FraudScenario"] = 2
 
   return fraudulent_transactions
 
@@ -204,7 +207,7 @@ def main(n_customers: int, n_terminals: int, n_periods: int, period_length: int,
 
   transactions.sort_values("Time", inplace=True)
 
-  send_table_on_time(transactions, "transactions/")
+  send_table_on_time(transactions, "transactions/verify")
 
 if __name__ == "__main__":
   parser = argparse.ArgumentParser(description="Synthetic Data Generation")
