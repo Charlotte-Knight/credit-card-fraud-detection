@@ -47,6 +47,18 @@ class Transaction(TransactionBase, table=True):
 class TransactionPublic(TransactionBase):
   TransactionID: int
 
+class TransactionDetails(SQLModel):
+  Amount: float
+  Fraud: bool
+  CustomerAmountMean: float
+  CustomerAmountStd: float
+  CustomerLocationX: float
+  CustomerLocationY: float
+  TerminalLocationX: float
+  TerminalLocationY: float
+  Distance: float
+  ZScore: float
+
 class FraudBase(SQLModel):
   CustomerID: int | None = Field(foreign_key="customer.CustomerID", default=None)
   TerminalID: int | None = Field(foreign_key="terminal.TerminalID", default=None)
@@ -214,6 +226,36 @@ def read_transactions(
   transactions = session.exec(query).all()
   return transactions
 
+@app.get("/transactions/full/", response_model=list[TransactionDetails])
+def read_transactions_with_details(session: SessionDep, limit: int | None = None):
+  avg_subq = select(
+    Transaction.CustomerID, 
+    func.avg(Transaction.Amount).label("CustomerAmountMean"),
+    func.stddev(Transaction.Amount).label("CustomerAmountStd")
+    ).group_by(Transaction.CustomerID).subquery()
+  
+  statement = (
+    select(
+      Transaction.Amount.label("Amount"),
+      Transaction.Fraud.label("Fraud"),
+      Customer.LocationX.label("CustomerLocationX"),
+      Customer.LocationY.label("CustomerLocationY"),
+      Terminal.LocationX.label("TerminalLocationX"),
+      Terminal.LocationY.label("TerminalLocationY"),
+      avg_subq.c.CustomerAmountMean.label("CustomerAmountMean"),
+      avg_subq.c.CustomerAmountStd.label("CustomerAmountStd"),
+      func.sqrt(func.pow(Customer.LocationX - Terminal.LocationX, 2) + func.pow(Customer.LocationY - Terminal.LocationY, 2)).label("Distance"),
+      (func.abs(Transaction.Amount - avg_subq.c.CustomerAmountMean) / func.nullif(avg_subq.c.CustomerAmountStd, 0)).label("ZScore")
+    )
+    .join(Customer, Customer.CustomerID == Transaction.CustomerID)
+    .join(Terminal, Terminal.TerminalID == Transaction.TerminalID)
+    .join(avg_subq, avg_subq.c.CustomerID == Transaction.CustomerID)
+    .limit(limit)
+  )
+    
+  results = session.exec(statement).all()
+  return results
+
 @app.get("/transactions/locations/")
 def read_transaction_locations(session: SessionDep) -> list[tuple[Transaction, Terminal]]:
   statement = select(Transaction, Terminal).where(Transaction.TerminalID == Terminal.TerminalID)
@@ -239,8 +281,7 @@ def calculate_customer_character(CustomerID, session: SessionDep):
     "AmountStd": result[1]
   }
 
-
-@app.post("/transactions/verify")
+@app.post("/transactions/verify/")
 def verify_transaction(transaction: TransactionBase, session: SessionDep):
   db_transaction = Transaction.model_validate(transaction)
 

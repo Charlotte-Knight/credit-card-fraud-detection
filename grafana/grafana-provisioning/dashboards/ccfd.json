@@ -18,7 +18,7 @@
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 0,
-  "id": 4,
+  "id": 2,
   "links": [],
   "panels": [
     {
@@ -84,7 +84,7 @@
           "format": "table",
           "hide": false,
           "rawQuery": true,
-          "rawSql": "SELECT count(*) as \"Transactions\"\nFROM transaction",
+          "rawSql": "SELECT count(*) as \"Transactions\"\nFROM transaction\nWHERE $__timeFilter(\"Time\") ",
           "refId": "Transactions",
           "sql": {
             "columns": [
@@ -519,6 +519,32 @@
         }
       ],
       "title": "Transaction Rate",
+      "transformations": [
+        {
+          "id": "calculateField",
+          "options": {
+            "binary": {
+              "left": {
+                "fixed": ""
+              },
+              "right": {
+                "fixed": ""
+              }
+            },
+            "mode": "windowFunctions",
+            "reduce": {
+              "reducer": "sum"
+            },
+            "replaceFields": false,
+            "window": {
+              "reducer": "mean",
+              "windowAlignment": "centered",
+              "windowSize": 0.2,
+              "windowSizeMode": "percentage"
+            }
+          }
+        }
+      ],
       "type": "timeseries"
     },
     {

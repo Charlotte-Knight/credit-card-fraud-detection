@@ -23,7 +23,7 @@ def generate_locations(n: int, r : tuple[float, float] = (0,100)) -> pd.DataFram
 
 def generate_transaction_characters(n: int,
                                     amount_mean: tuple[float, float] = (0.1, 10),
-                                    tx_rate :    tuple[float, float] = (0.1, 10)) -> pd.DataFrame:
+                                    tx_rate :    tuple[float, float] = (1.0, 10)) -> pd.DataFrame:
   characters = {
     "AmountMean": np.random.uniform(amount_mean[0], amount_mean[1], n),
     "TxRate":     np.random.uniform(    tx_rate[0],     tx_rate[1], n)
@@ -32,7 +32,7 @@ def generate_transaction_characters(n: int,
   return pd.DataFrame(characters).round(4)
 
 def generate_times(rate: float, time_info: TimeInfo) -> pd.Series:
-  n = int(time_info.n_periods * rate) + 1
+  n = int((time_info.n_periods + 2) * rate)
   time_deltas = np.random.exponential(1/rate, n).cumsum() * time_info.period_length
   time_deltas = pd.to_timedelta(time_deltas, unit='m')
   return time_info.start_date + time_deltas
@@ -186,7 +186,7 @@ def generate_send(generate_f: callable, generate_args: list, path: str, ID_col: 
   return df
 
 def main(n_customers: int, n_terminals: int, n_periods: int, period_length: int,
-         clear_database: bool, seed: int):
+         clear_database: bool, seed: int, dump: bool):
   np.random.seed(seed)
   if clear_database:
     delete_all_data()
@@ -204,19 +204,27 @@ def main(n_customers: int, n_terminals: int, n_periods: int, period_length: int,
   terminal_fraud_transactions = generate_fraudulent_terminal_transactions(terminal_frauds, customers, time_info)
 
   transactions = pd.concat([genuine_transactions, customer_fraud_transactions, terminal_fraud_transactions], ignore_index=True)
+  transactions = transactions[transactions.Time <= start_date + pd.Timedelta(n_periods * period_length, 'm')]
+  print(len(transactions), "transactions generated")
 
   transactions.sort_values("Time", inplace=True)
 
-  send_table_on_time(transactions, "transactions/verify")
+  if dump:
+    transactions["Time"] += pd.Timestamp.now(tz='UTC') - transactions["Time"].min() - pd.Timedelta(n_periods * period_length, 'm')
+    send_table(transactions, "transactions/batch/")
+  else:
+    send_table_on_time(transactions, "transactions/verify/")
 
 if __name__ == "__main__":
   parser = argparse.ArgumentParser(description="Synthetic Data Generation")
   parser.add_argument("--n-customers", "-c", type=int, default=5000, help="Number of new customers to generate")
   parser.add_argument("--n-terminals", "-t", type=int, default=5000, help="Number of new terminals to generate")
-  parser.add_argument("--n-periods", "-n", type=int, default=2, help="Number of periods to generate transactions for")
+  parser.add_argument("--n-periods", "-n", type=int, default=6, help="Number of periods to generate transactions for")
   parser.add_argument("--period-length", "-l", type=int, default=5, help="Length of a period in minutes")
-  parser.add_argument("--clear-database", action='store_true', help="Clear the database before generating new data")
   parser.add_argument("--seed", "-s", type=int, default=42, help="Random seed for reproducibility")
+  parser.add_argument("--clear-database", action='store_true', help="Clear the database before generating new data")
+  parser.add_argument("--dump", action='store_true', help="Dump all data into the database instead of doing it live")
 
   args = parser.parse_args()
-  main(args.n_customers, args.n_terminals, args.n_periods, args.period_length, args.clear_database, args.seed)
+  main(args.n_customers, args.n_terminals, args.n_periods, args.period_length, args.seed,
+       args.clear_database, args.dump)
