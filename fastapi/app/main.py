@@ -1,13 +1,21 @@
 from datetime import datetime
 from typing import Annotated
 
-from fastapi import Depends, FastAPI, HTTPException, Query
+from fastapi import Depends, FastAPI, HTTPException, Query#
+from fastapi.responses import FileResponse
+from fastapi.middleware.cors import CORSMiddleware
 from sqlmodel import Field, Relationship, Session, SQLModel, create_engine, select, delete, func
 
 import random
 import scipy.stats as stats
 
+import sklearn
+import matplotlib.pyplot as plt
+import pandas as pd
+
 from prometheus_fastapi_instrumentator import Instrumentator
+
+"""----------------------------------------------------------------------------------------------"""
 
 class CustomerBase(SQLModel):
   LocationX: float = Field(ge=0, le=100)
@@ -87,6 +95,14 @@ def get_session():
 SessionDep = Annotated[Session, Depends(get_session)]
 app = FastAPI()
 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 Instrumentator().instrument(app).expose(app)
 
 @app.on_event("startup")
@@ -94,6 +110,45 @@ def on_startup():
   create_db_and_tables()
 
 """----------------------------------------------------------------------------------------------"""
+
+tree = sklearn.tree.DecisionTreeClassifier(max_depth=3)
+
+@app.get("/tree/train")
+def train_tree(limit: int | None = None) -> float:
+  with Session(engine) as session:
+    transactions = pd.DataFrame(read_transactions_with_details(session, limit=limit))
+  transactions.fillna(0, inplace=True)
+  X = transactions[["Amount", "Distance", "ZScore"]]
+  y = transactions["Fraud"]
+  tree.fit(X, y)
+  return tree.score(X, y)    
+
+@app.get("/tree/visualize", response_class=FileResponse)
+def visualize_tree():
+  plt.figure(figsize=(8,4))
+
+  try:
+    sklearn.tree.plot_tree(tree, filled=True, feature_names=["Amount", "Distance", "ZScore"], class_names=["Genuine", "Fraud"],
+                           label="root", impurity=False, proportion=True, rounded=True, precision=2, fontsize=10)
+    plt.tight_layout()
+  except:
+    plt.text(0.5, 0.5, "Tree is not trained yet, press Train and refresh page", ha="center")
+    plt.axis("off")
+  plt.savefig("tree.svg")
+  return "tree.svg"
+
+@app.get("/tree/predict/{transaction_id}")
+def tree_predict(transaction_id: int, session: SessionDep) -> bool:
+  transaction_details = read_transaction_with_details(transaction_id, session)
+  X = pd.DataFrame([transaction_details])[[ "Amount", "Distance", "ZScore"]]
+  try:
+    return tree.predict(X)[0]
+  except:
+    return False
+
+"""----------------------------------------------------------------------------------------------"""
+
+
 
 @app.post("/customers/", response_model=CustomerPublic)
 def create_customer(customer: CustomerBase, session: SessionDep):
@@ -256,6 +311,36 @@ def read_transactions_with_details(session: SessionDep, limit: int | None = None
   results = session.exec(statement).all()
   return results
 
+@app.get("/transactions/full/{transaction_id}", response_model=TransactionDetails)
+def read_transaction_with_details(transaction_id: int, session: SessionDep):
+  avg_subq = select(
+    Transaction.CustomerID, 
+    func.avg(Transaction.Amount).label("CustomerAmountMean"),
+    func.stddev(Transaction.Amount).label("CustomerAmountStd")
+    ).group_by(Transaction.CustomerID).subquery()
+  
+  statement = (
+    select(
+      Transaction.Amount.label("Amount"),
+      Transaction.Fraud.label("Fraud"),
+      Customer.LocationX.label("CustomerLocationX"),
+      Customer.LocationY.label("CustomerLocationY"),
+      Terminal.LocationX.label("TerminalLocationX"),
+      Terminal.LocationY.label("TerminalLocationY"),
+      avg_subq.c.CustomerAmountMean.label("CustomerAmountMean"),
+      avg_subq.c.CustomerAmountStd.label("CustomerAmountStd"),
+      func.sqrt(func.pow(Customer.LocationX - Terminal.LocationX, 2) + func.pow(Customer.LocationY - Terminal.LocationY, 2)).label("Distance"),
+      (func.abs(Transaction.Amount - avg_subq.c.CustomerAmountMean) / func.nullif(avg_subq.c.CustomerAmountStd, 0)).label("ZScore")
+    )
+    .join(Customer, Customer.CustomerID == Transaction.CustomerID)
+    .join(Terminal, Terminal.TerminalID == Transaction.TerminalID)
+    .join(avg_subq, avg_subq.c.CustomerID == Transaction.CustomerID)
+    .where(Transaction.TransactionID == transaction_id)
+  )
+    
+  results = session.exec(statement).one()
+  return results
+
 @app.get("/transactions/locations/")
 def read_transaction_locations(session: SessionDep) -> list[tuple[Transaction, Terminal]]:
   statement = select(Transaction, Terminal).where(Transaction.TerminalID == Terminal.TerminalID)
@@ -285,17 +370,22 @@ def calculate_customer_character(CustomerID, session: SessionDep):
 def verify_transaction(transaction: TransactionBase, session: SessionDep):
   db_transaction = Transaction.model_validate(transaction)
 
-  character = calculate_customer_character(db_transaction.CustomerID, session)
-  if character["AmountMean"] and character["AmountStd"]:
-    p = stats.norm.pdf(db_transaction.Amount, loc=character["AmountMean"], scale=character["AmountStd"])
-  else:
-    p = 1.0
-
-  db_transaction.Accepted = p > 0.001
-
+  # character = calculate_customer_character(db_transaction.CustomerID, session)
+  # if character["AmountMean"] and character["AmountStd"]:
+  #   p = stats.norm.pdf(db_transaction.Amount, loc=character["AmountMean"], scale=character["AmountStd"])
+  # else:
+  #   p = 1.0
+  # db_transaction.Accepted = p > 0.001
+  
   session.add(db_transaction)
   session.commit()
   session.refresh(db_transaction)
+
+  db_transaction.Accepted = not tree_predict(db_transaction.TransactionID, session)
+  session.add(db_transaction)
+  session.commit()
+  session.refresh(db_transaction)
+
   return db_transaction
 
 """----------------------------------------------------------------------------------------------"""

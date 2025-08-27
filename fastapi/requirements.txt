@@ -3,3 +3,7 @@ prometheus-fastapi-instrumentator
 sqlmodel
 psycopg2-binary
 scipy
+scikit-learn
+matplotlib
+pandas
+pydotplus

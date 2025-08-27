@@ -23,7 +23,7 @@ def generate_locations(n: int, r : tuple[float, float] = (0,100)) -> pd.DataFram
 
 def generate_transaction_characters(n: int,
                                     amount_mean: tuple[float, float] = (0.1, 10),
-                                    tx_rate :    tuple[float, float] = (1.0, 10)) -> pd.DataFrame:
+                                    tx_rate :    tuple[float, float] = (0.5, 2)) -> pd.DataFrame:
   characters = {
     "AmountMean": np.random.uniform(amount_mean[0], amount_mean[1], n),
     "TxRate":     np.random.uniform(    tx_rate[0],     tx_rate[1], n)
@@ -77,7 +77,7 @@ def generate_frauds(players: pd.DataFrame, time_info: TimeInfo,
   fraud_rate = len(players) * fraud_rate_fraction
 
   time_windows = generate_time_windows(fraud_rate, time_info)
-  characters = generate_transaction_characters(len(time_windows), (5, 20), (5, 20))
+  characters = generate_transaction_characters(len(time_windows), (5, 20), (1, 4))
 
   frauds = time_windows.join(characters)
   frauds[players.index.name] = np.random.choice(players.index, len(frauds))
@@ -219,8 +219,8 @@ if __name__ == "__main__":
   parser = argparse.ArgumentParser(description="Synthetic Data Generation")
   parser.add_argument("--n-customers", "-c", type=int, default=5000, help="Number of new customers to generate")
   parser.add_argument("--n-terminals", "-t", type=int, default=5000, help="Number of new terminals to generate")
-  parser.add_argument("--n-periods", "-n", type=int, default=6, help="Number of periods to generate transactions for")
-  parser.add_argument("--period-length", "-l", type=int, default=5, help="Length of a period in minutes")
+  parser.add_argument("--n-periods", "-n", type=int, default=10, help="Number of periods to generate transactions for")
+  parser.add_argument("--period-length", "-l", type=int, default=2, help="Length of a period in minutes")
   parser.add_argument("--seed", "-s", type=int, default=42, help="Random seed for reproducibility")
   parser.add_argument("--clear-database", action='store_true', help="Clear the database before generating new data")
   parser.add_argument("--dump", action='store_true', help="Dump all data into the database instead of doing it live")

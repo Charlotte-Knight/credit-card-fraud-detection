@@ -9,6 +9,8 @@ services:
       test: pg_isready
       start_period: 5s
       start_interval: 5s
+    ports:
+      - 5432:5432
 
   prometheus:
     container_name: prometheus
@@ -37,6 +39,7 @@ services:
         restart: true
     build:
       context: ./fastapi
+    restart: on-failure
     ports:
       - 80:80
 

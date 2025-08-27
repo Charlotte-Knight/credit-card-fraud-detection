@@ -22,6 +22,19 @@
   "links": [],
   "panels": [
     {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "id": 14,
+      "panels": [],
+      "title": "Transaction Monitoring (via DB)",
+      "type": "row"
+    },
+    {
       "datasource": {
         "type": "grafana-postgresql-datasource",
         "uid": "postgres"
@@ -53,7 +66,7 @@
         "h": 3,
         "w": 24,
         "x": 0,
-        "y": 0
+        "y": 1
       },
       "id": 5,
       "options": {
@@ -266,7 +279,7 @@
         "h": 7,
         "w": 12,
         "x": 0,
-        "y": 3
+        "y": 4
       },
       "id": 10,
       "options": {
@@ -440,7 +453,7 @@
         "h": 7,
         "w": 12,
         "x": 12,
-        "y": 3
+        "y": 4
       },
       "id": 11,
       "options": {
@@ -462,8 +475,72 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT\n  $__timeGroup(\"Time\", '1s') AS time,\n  COUNT(*) AS transaction_count\nFROM transaction\nWHERE $__timeFilter(\"Time\")\nGROUP BY 1\nORDER BY 1;",
+          "rawSql": "SELECT\n  $__timeGroup(\"Time\", '1s') AS time,\n  COUNT(*) AS \"Genuine\"\nFROM transaction\nWHERE $__timeFilter(\"Time\") AND NOT \"Fraud\"\nGROUP BY 1\nORDER BY 1;",
           "refId": "A",
+          "sql": {
+            "columns": [
+              {
+                "name": "COUNT",
+                "parameters": [
+                  {
+                    "name": "*",
+                    "type": "functionParameter"
+                  }
+                ],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50,
+            "whereJsonTree": {
+              "children1": [
+                {
+                  "id": "ab899b98-cdef-4012-b456-7198e351dbc7",
+                  "properties": {
+                    "field": "\"Time\"",
+                    "fieldSrc": "field",
+                    "operator": "macros",
+                    "value": [
+                      "timeFilter"
+                    ],
+                    "valueError": [
+                      null
+                    ],
+                    "valueSrc": [
+                      "value"
+                    ],
+                    "valueType": [
+                      "datetime"
+                    ]
+                  },
+                  "type": "rule"
+                }
+              ],
+              "id": "baa9a9bb-0123-4456-b89a-b198e341d9f9",
+              "type": "group"
+            },
+            "whereString": "$__timeFilter(\"Time\")"
+          },
+          "table": "transaction"
+        },
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "postgres"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "hide": false,
+          "rawQuery": true,
+          "rawSql": "SELECT\n  $__timeGroup(\"Time\", '1s') AS time,\n  COUNT(*) AS \"Fraudulent\"\nFROM transaction\nWHERE $__timeFilter(\"Time\") AND \"Fraud\"\nGROUP BY 1\nORDER BY 1;",
+          "refId": "B",
           "sql": {
             "columns": [
               {
@@ -523,6 +600,7 @@
         {
           "id": "calculateField",
           "options": {
+            "alias": "Genuine (Mean)",
             "binary": {
               "left": {
                 "fixed": ""
@@ -537,6 +615,24 @@
             },
             "replaceFields": false,
             "window": {
+              "field": "Genuine",
+              "reducer": "mean",
+              "windowAlignment": "centered",
+              "windowSize": 0.2,
+              "windowSizeMode": "percentage"
+            }
+          }
+        },
+        {
+          "id": "calculateField",
+          "options": {
+            "alias": "Fraudulent (Mean)",
+            "mode": "windowFunctions",
+            "reduce": {
+              "reducer": "sum"
+            },
+            "window": {
+              "field": "Fraudulent",
               "reducer": "mean",
               "windowAlignment": "centered",
               "windowSize": 0.2,
@@ -587,7 +683,7 @@
         "h": 9,
         "w": 24,
         "x": 0,
-        "y": 10
+        "y": 11
       },
       "id": 12,
       "options": {
@@ -646,7 +742,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 19
+        "y": 20
       },
       "id": 7,
       "panels": [],
@@ -720,7 +816,7 @@
               "options": {
                 "mode": "exclude",
                 "names": [
-                  "{handler=\"/transactions/verify\", instance=\"fastapi:80\", job=\"fastapi-app\", method=\"POST\", status=\"2xx\"}"
+                  "{handler=\"/transactions/verify/\", instance=\"fastapi:80\", job=\"fastapi-app\", method=\"POST\", status=\"2xx\"}"
                 ],
                 "prefix": "All except:",
                 "readOnly": true
@@ -743,7 +839,7 @@
         "h": 8,
         "w": 8,
         "x": 0,
-        "y": 20
+        "y": 21
       },
       "id": 6,
       "options": {
@@ -846,7 +942,7 @@
         "h": 8,
         "w": 8,
         "x": 8,
-        "y": 20
+        "y": 21
       },
       "id": 8,
       "options": {
@@ -945,7 +1041,7 @@
         "h": 8,
         "w": 8,
         "x": 16,
-        "y": 20
+        "y": 21
       },
       "id": 9,
       "options": {
@@ -969,7 +1065,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "rate(process_cpu_seconds_total[1m])",
+          "expr": "rate(process_cpu_seconds_total[15s])",
           "instant": false,
           "legendFormat": "__auto",
           "range": true,
@@ -977,6 +1073,336 @@
         }
       ],
       "title": "CPU Utilisation",
+      "type": "timeseries"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 29
+      },
+      "id": 15,
+      "panels": [],
+      "title": "Classifier",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "postgres"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 13,
+        "w": 12,
+        "x": 0,
+        "y": 30
+      },
+      "id": 13,
+      "options": {
+        "infinitePan": false,
+        "inlineEditing": false,
+        "panZoom": false,
+        "root": {
+          "background": {
+            "color": {
+              "fixed": "transparent"
+            },
+            "image": {
+              "fixed": "http://localhost/tree/visualize",
+              "mode": "fixed"
+            }
+          },
+          "border": {
+            "color": {
+              "fixed": "dark-green"
+            }
+          },
+          "constraint": {
+            "horizontal": "left",
+            "vertical": "top"
+          },
+          "elements": [
+            {
+              "background": {
+                "color": {
+                  "fixed": "transparent"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "dark-green"
+                }
+              },
+              "config": {
+                "align": "center",
+                "api": {
+                  "contentType": "application/json",
+                  "data": "{}",
+                  "endpoint": "http://localhost/tree/train",
+                  "headerParams": [],
+                  "method": "GET",
+                  "queryParams": []
+                },
+                "color": {
+                  "fixed": "#F0F4FD"
+                },
+                "size": 14,
+                "style": {
+                  "variant": "primary"
+                },
+                "text": {
+                  "fixed": "Train",
+                  "mode": "fixed"
+                }
+              },
+              "constraint": {
+                "horizontal": "left",
+                "vertical": "top"
+              },
+              "name": "Train",
+              "placement": {
+                "height": 45,
+                "left": 22,
+                "top": 24,
+                "width": 150
+              },
+              "type": "button"
+            }
+          ],
+          "name": "Element 1756292198878",
+          "placement": {
+            "height": 100,
+            "left": 0,
+            "rotation": 0,
+            "top": 0,
+            "width": 100
+          },
+          "type": "frame"
+        },
+        "showAdvancedTypes": true
+      },
+      "pluginVersion": "12.1.1",
+      "targets": [
+        {
+          "refId": "A"
+        }
+      ],
+      "title": "Decision Tree",
+      "type": "canvas"
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "postgres"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "barWidthFactor": 0.6,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "percentunit"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 13,
+        "w": 12,
+        "x": 12,
+        "y": 30
+      },
+      "id": 17,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "12.1.1",
+      "targets": [
+        {
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT\n  $__timeGroup(\"Time\", '15s') AS time,\n  COUNT(*) FILTER (WHERE NOT \"Fraud\" AND \"Accepted\")::float / NULLIF(COUNT(*) FILTER (WHERE NOT \"Fraud\"), 0) AS \"Genuine True\",\n  COUNT(*) FILTER (WHERE NOT \"Fraud\" AND NOT \"Accepted\")::float / NULLIF(COUNT(*) FILTER (WHERE NOT \"Fraud\"), 0) AS \"Genuine False\",\n  COUNT(*) FILTER (WHERE \"Fraud\" AND NOT \"Accepted\")::float / NULLIF(COUNT(*) FILTER (WHERE \"Fraud\"), 0) AS \"Fraud True\",\n  COUNT(*) FILTER (WHERE \"Fraud\" AND \"Accepted\")::float / NULLIF(COUNT(*) FILTER (WHERE \"Fraud\"), 0) AS \"Fraud False\"\nFROM transaction\nWHERE $__timeFilter(\"Time\")\nGROUP BY 1\nORDER BY 1;",
+          "refId": "A",
+          "sql": {
+            "columns": [
+              {
+                "name": "COUNT",
+                "parameters": [
+                  {
+                    "name": "*",
+                    "type": "functionParameter"
+                  }
+                ],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50,
+            "whereJsonTree": {
+              "children1": [
+                {
+                  "id": "ab899b98-cdef-4012-b456-7198e351dbc7",
+                  "properties": {
+                    "field": "\"Time\"",
+                    "fieldSrc": "field",
+                    "operator": "macros",
+                    "value": [
+                      "timeFilter"
+                    ],
+                    "valueError": [
+                      null
+                    ],
+                    "valueSrc": [
+                      "value"
+                    ],
+                    "valueType": [
+                      "datetime"
+                    ]
+                  },
+                  "type": "rule"
+                }
+              ],
+              "id": "baa9a9bb-0123-4456-b89a-b198e341d9f9",
+              "type": "group"
+            },
+            "whereString": "$__timeFilter(\"Time\")"
+          },
+          "table": "transaction"
+        }
+      ],
+      "title": "Classification Performance",
+      "transformations": [
+        {
+          "id": "calculateField",
+          "options": {
+            "alias": "Genuine (Mean)",
+            "binary": {
+              "left": {
+                "fixed": ""
+              },
+              "right": {
+                "fixed": ""
+              }
+            },
+            "mode": "windowFunctions",
+            "reduce": {
+              "reducer": "sum"
+            },
+            "replaceFields": false,
+            "window": {
+              "field": "Genuine",
+              "reducer": "mean",
+              "windowAlignment": "centered",
+              "windowSize": 0.2,
+              "windowSizeMode": "percentage"
+            }
+          }
+        },
+        {
+          "id": "calculateField",
+          "options": {
+            "alias": "Fraudulent (Mean)",
+            "mode": "windowFunctions",
+            "reduce": {
+              "reducer": "sum"
+            },
+            "window": {
+              "field": "Fraudulent",
+              "reducer": "mean",
+              "windowAlignment": "centered",
+              "windowSize": 0.2,
+              "windowSizeMode": "percentage"
+            }
+          }
+        }
+      ],
       "type": "timeseries"
     }
   ],
