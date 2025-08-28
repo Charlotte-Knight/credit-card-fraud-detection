@@ -6,7 +6,22 @@ from tqdm import tqdm
 from apscheduler.schedulers.background import BlockingScheduler
 from dataclasses import dataclass
 
-API_URL = "http://fastapi:80/"
+API_URLs = ["http://fastapi:80/", "http://localhost:8000/"]
+API_URL = None
+
+for url in API_URLs:
+  try:
+    response = requests.get(url + "health/", timeout=5)
+    if response.status_code == 200:
+      API_URL = url
+    break
+  except requests.exceptions.RequestException:
+    continue
+
+if API_URL:
+  print(f"Using API at {API_URL}")
+else:
+  raise ConnectionError("Could not connect to FastAPI at any known URL")
 
 @dataclass
 class TimeInfo:
@@ -32,8 +47,9 @@ def generate_transaction_characters(n: int,
   return pd.DataFrame(characters).round(4)
 
 def generate_times(rate: float, time_info: TimeInfo) -> pd.Series:
-  n = int((time_info.n_periods + 2) * rate)
+  n = int(time_info.n_periods * rate * 2) 
   time_deltas = np.random.exponential(1/rate, n).cumsum() * time_info.period_length
+  time_deltas = time_deltas[time_deltas <= time_info.n_periods * time_info.period_length]
   time_deltas = pd.to_timedelta(time_deltas, unit='m')
   return time_info.start_date + time_deltas
 
@@ -112,6 +128,8 @@ def generate_genuine_transactions(customers: pd.DataFrame, terminals: pd.DataFra
 
 def generate_fraudulent_customer_transactions(frauds: pd.DataFrame, terminals: pd.DataFrame,
                                               time_info: TimeInfo) -> pd.DataFrame:
+  if frauds.empty:
+    return frauds
   fraudulent_transactions = []
 
   for FraudID, fraud in tqdm(frauds.iterrows(), desc="Generating fraudulent customer transactions",
@@ -126,13 +144,14 @@ def generate_fraudulent_customer_transactions(frauds: pd.DataFrame, terminals: p
 
   fraudulent_transactions = pd.concat(fraudulent_transactions, ignore_index=True)
   fraudulent_transactions["Fraud"] = True
-  transactions["FraudScenario"] = 1
-
+  fraudulent_transactions["FraudScenario"] = 1
 
   return fraudulent_transactions
 
 def generate_fraudulent_terminal_transactions(frauds: pd.DataFrame, customers: pd.DataFrame,
                                               time_info: TimeInfo) -> pd.DataFrame:
+  if frauds.empty:
+    return frauds
   fraudulent_transactions = []
 
   for FraudID, fraud in tqdm(frauds.iterrows(), desc="Generating fraudulent terminal transactions",
@@ -147,7 +166,7 @@ def generate_fraudulent_terminal_transactions(frauds: pd.DataFrame, customers: p
 
   fraudulent_transactions = pd.concat(fraudulent_transactions, ignore_index=True)
   fraudulent_transactions["Fraud"] = True
-  transactions["FraudScenario"] = 2
+  fraudulent_transactions["FraudScenario"] = 2
 
   return fraudulent_transactions
 
@@ -155,14 +174,11 @@ def delete_all_data():
   response = requests.delete(API_URL + "delete_all_data/")
   assert response.status_code == 200, response.text
 
-def send_table(df, path, batch_size=5000):
-  responses = []
-  for i in tqdm(range(0, df.shape[0], batch_size), desc=f"Sending to {path}"):
-    response = requests.post(API_URL + path,
-                             data=df.iloc[i:i+batch_size].to_json(orient='records'), timeout=60)
-    assert response.status_code == 200, response.text
-    responses.append(pd.DataFrame(response.json()))
-  return pd.concat(responses, ignore_index=True)
+def send_table(df, path):
+  response = requests.post(API_URL + path,
+                           data=df.to_json(orient='records'), timeout=60)
+  assert response.status_code == 201, response.text
+  return pd.DataFrame(response.json())
 
 def send_table_single(df, path):
   response = requests.post(API_URL + path,
@@ -181,8 +197,9 @@ def send_table_on_time(df, path):
 
 def generate_send(generate_f: callable, generate_args: list, path: str, ID_col: str):
   df = generate_f(*generate_args)
-  df = send_table(df, path)
-  df.set_index(ID_col, inplace=True)
+  if not df.empty:
+    df = send_table(df, path)
+    df.set_index(ID_col, inplace=True)
   return df
 
 def main(n_customers: int, n_terminals: int, n_periods: int, period_length: int,
@@ -211,7 +228,13 @@ def main(n_customers: int, n_terminals: int, n_periods: int, period_length: int,
 
   if dump:
     transactions["Time"] += pd.Timestamp.now(tz='UTC') - transactions["Time"].min() - pd.Timedelta(n_periods * period_length, 'm')
-    send_table(transactions, "transactions/batch/")
+    import time
+    t = time.time()
+    #send_table(transactions, "transactions/batch/")
+    response = requests.put(API_URL + "transactions/",
+                            data=transactions.to_json(orient='records'), timeout=60)
+    assert response.status_code == 200, response.text
+    print("Time taken:", time.time() - t)
   else:
     send_table_on_time(transactions, "transactions/verify/")
 
