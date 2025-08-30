@@ -3,3 +3,4 @@ numpy
 tqdm
 requests
 apscheduler
+rich
