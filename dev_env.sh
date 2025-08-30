@@ -1,5 +1,3 @@
-#!/usr/bin/env bash
-
 env_dir=${PWD}/.dev_env
 env_name=dev_env
 
@@ -14,5 +12,6 @@ else
   eval "$($env_dir/micromamba shell hook -s posix)"
   cat fastapi/requirements.txt synthetic_data/requirements.txt > $env_dir/requirements.txt
   micromamba env create -n $env_name -f $env_dir/requirements.txt
+  micromamba clean --all --yes
   micromamba activate $env_name
 fi

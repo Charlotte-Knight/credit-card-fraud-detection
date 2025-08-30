@@ -37,16 +37,16 @@ services:
       postgres:
         condition: service_healthy
         restart: true
-    build:
-      context: ./fastapi
+    build: ./fastapi
+    image: fastapi
     restart: on-failure
     ports:
-      - 80:80
+      - 8000:8000
 
   synthetic_data:
     container_name: synthetic_data
-    build:
-      context: ./synthetic_data
+    build: ./synthetic_data
+    image: synthetic_data
     depends_on:
       fastapi:
         condition: service_healthy
