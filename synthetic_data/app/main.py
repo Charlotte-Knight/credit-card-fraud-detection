@@ -2,14 +2,13 @@ import numpy as np
 import pandas as pd
 import requests
 import argparse
-from tqdm import tqdm
 from apscheduler.schedulers.background import BlockingScheduler
 from dataclasses import dataclass
-import logging 
+import logging
+from typing import Callable
 
 from rich.logging import RichHandler
 from rich.traceback import install
-#logging.basicConfig(level=logging.INFO)
 install()
 logging.basicConfig(
     level=logging.INFO,
@@ -19,7 +18,6 @@ logging.basicConfig(
 logging.getLogger('apscheduler.scheduler').setLevel(logging.WARNING)
 logging.getLogger('apscheduler.executors.default').setLevel(logging.WARNING)
 logger = logging.getLogger(__name__)
-
 
 @dataclass
 class TimeInfo:
@@ -44,8 +42,8 @@ def generate_transaction_characters(n: int,
   characters["AmountStd"] = characters["AmountMean"] / 2
   return pd.DataFrame(characters).round(4)
 
-def generate_times(rate: float, time_info: TimeInfo) -> pd.Series:
-  n = int(time_info.n_periods * rate * 2) 
+def generate_times(rate: float, time_info: TimeInfo) -> pd.DatetimeIndex:
+  n = int(time_info.n_periods * rate * 2)
   time_deltas = np.random.exponential(1/rate, n).cumsum() * time_info.period_length
   time_deltas = time_deltas[time_deltas <= time_info.n_periods * time_info.period_length]
   time_deltas = pd.to_timedelta(time_deltas, unit='m')
@@ -64,6 +62,7 @@ def generate_time_windows(rate: float, time_info: TimeInfo,
   return pd.DataFrame(time_windows)
 
 def generate_customers(n_customers: int):
+  logger.info("Generating %d customers", n_customers)
   locations = generate_locations(n_customers)
   tx_characters = generate_transaction_characters(n_customers)
   customers = locations.join(tx_characters).round(4)
@@ -71,6 +70,7 @@ def generate_customers(n_customers: int):
   return customers
 
 def generate_terminals(n_terminals: int):
+  logger.info("Generating %d terminals", n_terminals)
   locations = generate_locations(n_terminals).round(4)
   return locations
 
@@ -105,10 +105,10 @@ def get_distances(customer: pd.Series, terminals: pd.DataFrame) -> pd.Series:
 
 def generate_genuine_transactions(customers: pd.DataFrame, terminals: pd.DataFrame,
                                   time_info: TimeInfo) -> pd.DataFrame:
+  logger.info("Generating genuine transactions")
   transactions = []
 
-  for CustomerID, customer in tqdm(customers.iterrows(), desc="Generating customer transactions",
-                                   total=customers.shape[0]):
+  for CustomerID, customer in customers.iterrows():
     customer_transactions = generate_transactions(customer, time_info)
 
     distances = get_distances(customer, terminals)
@@ -128,15 +128,16 @@ def generate_fraudulent_customer_transactions(frauds: pd.DataFrame, terminals: p
                                               time_info: TimeInfo) -> pd.DataFrame:
   if frauds.empty:
     return frauds
+  logger.info("Generating fraudulent customer transactions")
   fraudulent_transactions = []
 
-  for FraudID, fraud in tqdm(frauds.iterrows(), desc="Generating fraudulent customer transactions",
-                        total=frauds.shape[0]):
+  for FraudID, fraud in frauds.iterrows():
     transactions = generate_transactions(fraud, time_info)
     transactions = transactions[ (transactions.Time >= fraud.StartTime) & (transactions.Time <= fraud.EndTime) ]
     
     transactions["CustomerID"] = fraud["CustomerID"]
     transactions["TerminalID"] = np.random.choice(terminals.index, len(transactions))
+    transactions["FraudID"] = FraudID
 
     fraudulent_transactions.append(transactions)
 
@@ -150,15 +151,16 @@ def generate_fraudulent_terminal_transactions(frauds: pd.DataFrame, customers: p
                                               time_info: TimeInfo) -> pd.DataFrame:
   if frauds.empty:
     return frauds
+  logger.info("Generating fraudulent terminal transactions")
   fraudulent_transactions = []
 
-  for FraudID, fraud in tqdm(frauds.iterrows(), desc="Generating fraudulent terminal transactions",
-                        total=frauds.shape[0]):
+  for FraudID, fraud in frauds.iterrows():
     transactions = generate_transactions(fraud, time_info)
     transactions = transactions[ (transactions.Time >= fraud.StartTime) & (transactions.Time <= fraud.EndTime) ]
     
     transactions["TerminalID"] = fraud["TerminalID"]
     transactions["CustomerID"] = np.random.choice(customers.index, len(transactions))
+    transactions["FraudID"] = FraudID
 
     fraudulent_transactions.append(transactions)
 
@@ -188,12 +190,14 @@ def send_table_on_time(api_url, df, path):
   df["Time"] += pd.Timedelta(len(df)/10000, 's')
 
   scheduler = BlockingScheduler()
-  for _, row in tqdm(df.iterrows(), desc="Scheduling transactions", total=df.shape[0]):
+  logger.info("Scheduling transactions")
+  for _, row in df.iterrows():
     scheduler.add_job(send_table_single, 'date', run_date=row.Time, args=[api_url, row, path])
-  logger.info(f"Transactions will begin at {df.iloc[0].Time} UTC")
+  logger.info("Transactions will begin at %s UTC", df.iloc[0].Time.strftime("%H:%M:%S"))
+  logger.info("Transactions will end at %s UTC", df.iloc[-1].Time.strftime("%H:%M:%S"))
   scheduler.start()
 
-def generate_send(generate_f: callable, generate_args: list, api_url: str, path: str, ID_col: str):
+def generate_send(generate_f: Callable, generate_args: list, api_url: str, path: str, ID_col: str):
   df = generate_f(*generate_args)
   if not df.empty:
     df = send_table(api_url, df, path)
@@ -220,7 +224,7 @@ def main(n_customers: int, n_terminals: int, n_periods: int, period_length: int,
 
   transactions = pd.concat([genuine_transactions, customer_fraud_transactions, terminal_fraud_transactions], ignore_index=True)
   transactions = transactions[transactions.Time <= start_date + pd.Timedelta(n_periods * period_length, 'm')]
-  logger.info(f"{len(transactions)} transactions generated")
+  logger.info("%d transactions generated", len(transactions))
 
   transactions.sort_values("Time", inplace=True)
 
@@ -241,7 +245,7 @@ if __name__ == "__main__":
   parser.add_argument("--seed", "-s", type=int, default=42, help="Random seed for reproducibility")
   parser.add_argument("--clear-database", action='store_true', help="Clear the database before generating new data")
   parser.add_argument("--dump", action='store_true', help="Dump all data into the database instead of doing it live")
-  parser.add_argument("--api-url", default=("http://fastapi:80/", "http://localhost:80/"), nargs="+", type=str, help="API URL for the FastAPI app")
+  parser.add_argument("--api-url", default=("http://fastapi:8000/", "http://localhost:8000/"), nargs="+", type=str, help="API URL for the FastAPI app")
 
   args = parser.parse_args()
 
@@ -255,6 +259,6 @@ if __name__ == "__main__":
       continue
   if not api_url:
     raise ConnectionError("Could not connect to FastAPI at any known URL")
-  
-  main(args.n_customers, args.n_terminals, args.n_periods, args.period_length, args.seed,
-       args.clear_database, args.dump, api_url)
+    
+  main(args.n_customers, args.n_terminals, args.n_periods, args.period_length,
+       args.clear_database, args.seed, args.dump, api_url)
