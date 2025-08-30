@@ -5,23 +5,21 @@ import argparse
 from tqdm import tqdm
 from apscheduler.schedulers.background import BlockingScheduler
 from dataclasses import dataclass
+import logging 
 
-API_URLs = ["http://fastapi:80/", "http://localhost:8000/"]
-API_URL = None
+from rich.logging import RichHandler
+from rich.traceback import install
+#logging.basicConfig(level=logging.INFO)
+install()
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(message)s",
+    handlers=[RichHandler(rich_tracebacks=True)],
+)
+logging.getLogger('apscheduler.scheduler').setLevel(logging.WARNING)
+logging.getLogger('apscheduler.executors.default').setLevel(logging.WARNING)
+logger = logging.getLogger(__name__)
 
-for url in API_URLs:
-  try:
-    response = requests.get(url + "health/", timeout=5)
-    if response.status_code == 200:
-      API_URL = url
-    break
-  except requests.exceptions.RequestException:
-    continue
-
-if API_URL:
-  print(f"Using API at {API_URL}")
-else:
-  raise ConnectionError("Could not connect to FastAPI at any known URL")
 
 @dataclass
 class TimeInfo:
@@ -170,51 +168,51 @@ def generate_fraudulent_terminal_transactions(frauds: pd.DataFrame, customers: p
 
   return fraudulent_transactions
 
-def delete_all_data():
-  response = requests.delete(API_URL + "delete_all_data/")
+def delete_all_data(api_url):
+  response = requests.delete(api_url + "delete_all_data/")
   assert response.status_code == 200, response.text
 
-def send_table(df, path):
-  response = requests.post(API_URL + path,
+def send_table(api_url, df, path):
+  response = requests.post(api_url + path,
                            data=df.to_json(orient='records'), timeout=60)
   assert response.status_code == 201, response.text
   return pd.DataFrame(response.json())
 
-def send_table_single(df, path):
-  response = requests.post(API_URL + path,
+def send_table_single(api_url, df, path):
+  response = requests.post(api_url + path,
                            data=df.to_json(), timeout=60)
   assert response.status_code == 200, response.text
 
-def send_table_on_time(df, path):
+def send_table_on_time(api_url, df, path):
   df["Time"] += pd.Timestamp.now(tz='UTC') - df["Time"].min()
   df["Time"] += pd.Timedelta(len(df)/10000, 's')
 
   scheduler = BlockingScheduler()
   for _, row in tqdm(df.iterrows(), desc="Scheduling transactions", total=df.shape[0]):
-    scheduler.add_job(send_table_single, 'date', run_date=row.Time, args=[row, path])
-  print(f"Transactions will begin at {df.iloc[0].Time}")
+    scheduler.add_job(send_table_single, 'date', run_date=row.Time, args=[api_url, row, path])
+  logger.info(f"Transactions will begin at {df.iloc[0].Time} UTC")
   scheduler.start()
 
-def generate_send(generate_f: callable, generate_args: list, path: str, ID_col: str):
+def generate_send(generate_f: callable, generate_args: list, api_url: str, path: str, ID_col: str):
   df = generate_f(*generate_args)
   if not df.empty:
-    df = send_table(df, path)
+    df = send_table(api_url, df, path)
     df.set_index(ID_col, inplace=True)
   return df
 
 def main(n_customers: int, n_terminals: int, n_periods: int, period_length: int,
-         clear_database: bool, seed: int, dump: bool):
+         clear_database: bool, seed: int, dump: bool, api_url: str):
   np.random.seed(seed)
   if clear_database:
-    delete_all_data()
+    delete_all_data(api_url)
 
   start_date = pd.Timestamp.now(tz='UTC')
   time_info = TimeInfo(start_date, n_periods, period_length)
 
-  customers = generate_send(generate_customers, [n_customers], "customers/batch/", "CustomerID")
-  terminals = generate_send(generate_terminals, [n_terminals], "terminals/batch/", "TerminalID")
-  customer_frauds = generate_send(generate_frauds, [customers, time_info], "frauds/batch/", "FraudID")
-  terminal_frauds = generate_send(generate_frauds, [terminals, time_info], "frauds/batch/", "FraudID")
+  customers = generate_send(generate_customers, [n_customers], api_url, "customers/batch/", "CustomerID")
+  terminals = generate_send(generate_terminals, [n_terminals], api_url, "terminals/batch/", "TerminalID")
+  customer_frauds = generate_send(generate_frauds, [customers, time_info], api_url, "frauds/batch/", "FraudID")
+  terminal_frauds = generate_send(generate_frauds, [terminals, time_info], api_url, "frauds/batch/", "FraudID")
 
   genuine_transactions = generate_genuine_transactions(customers, terminals, time_info)
   customer_fraud_transactions = generate_fraudulent_customer_transactions(customer_frauds, terminals, time_info)
@@ -222,21 +220,17 @@ def main(n_customers: int, n_terminals: int, n_periods: int, period_length: int,
 
   transactions = pd.concat([genuine_transactions, customer_fraud_transactions, terminal_fraud_transactions], ignore_index=True)
   transactions = transactions[transactions.Time <= start_date + pd.Timedelta(n_periods * period_length, 'm')]
-  print(len(transactions), "transactions generated")
+  logger.info(f"{len(transactions)} transactions generated")
 
   transactions.sort_values("Time", inplace=True)
 
   if dump:
     transactions["Time"] += pd.Timestamp.now(tz='UTC') - transactions["Time"].min() - pd.Timedelta(n_periods * period_length, 'm')
-    import time
-    t = time.time()
-    #send_table(transactions, "transactions/batch/")
-    response = requests.put(API_URL + "transactions/",
+    response = requests.put(api_url + "transactions/",
                             data=transactions.to_json(orient='records'), timeout=60)
     assert response.status_code == 200, response.text
-    print("Time taken:", time.time() - t)
   else:
-    send_table_on_time(transactions, "transactions/verify/")
+    send_table_on_time(api_url, transactions, "transactions/verify/")
 
 if __name__ == "__main__":
   parser = argparse.ArgumentParser(description="Synthetic Data Generation")
@@ -247,7 +241,20 @@ if __name__ == "__main__":
   parser.add_argument("--seed", "-s", type=int, default=42, help="Random seed for reproducibility")
   parser.add_argument("--clear-database", action='store_true', help="Clear the database before generating new data")
   parser.add_argument("--dump", action='store_true', help="Dump all data into the database instead of doing it live")
+  parser.add_argument("--api-url", default=("http://fastapi:80/", "http://localhost:80/"), nargs="+", type=str, help="API URL for the FastAPI app")
 
   args = parser.parse_args()
+
+  api_url = None
+  for url in args.api_url:
+    try:
+      response = requests.get(url + "health/", timeout=5)
+      if response.status_code == 200:
+        api_url = url
+    except requests.exceptions.RequestException:
+      continue
+  if not api_url:
+    raise ConnectionError("Could not connect to FastAPI at any known URL")
+  
   main(args.n_customers, args.n_terminals, args.n_periods, args.period_length, args.seed,
-       args.clear_database, args.dump)
+       args.clear_database, args.dump, api_url)
