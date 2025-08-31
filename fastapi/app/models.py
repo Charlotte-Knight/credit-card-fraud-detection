@@ -46,17 +46,17 @@ class Transaction(TransactionBase, table=True):
 class TransactionPublic(TransactionBase):
   TransactionID: int
 
-class TransactionDetails(SQLModel):
+class TransactionFeatures(SQLModel):
   Amount: float
   Fraud: bool
-  CustomerAmountMean: float
-  CustomerAmountStd: float
+  CustomerAmountMean: float | None
+  CustomerAmountStd: float | None
   CustomerLocationX: float
   CustomerLocationY: float
   TerminalLocationX: float
   TerminalLocationY: float
   Distance: float
-  ZScore: float
+  ZScore: float | None
 
 
 class FraudBase(TransactionCharacter):

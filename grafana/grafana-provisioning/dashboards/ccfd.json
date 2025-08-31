@@ -18,7 +18,7 @@
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 0,
-  "id": 2,
+  "id": 1,
   "links": [],
   "panels": [
     {
@@ -1132,7 +1132,7 @@
               "fixed": "transparent"
             },
             "image": {
-              "fixed": "http://localhost/tree/visualize",
+              "fixed": "http://localhost:8000/fraud_detection/tree/visualize",
               "mode": "fixed"
             }
           },
@@ -1162,7 +1162,7 @@
                 "api": {
                   "contentType": "application/json",
                   "data": "{}",
-                  "endpoint": "http://localhost/tree/train",
+                  "endpoint": "http://localhost:8000/fraud_detection/train",
                   "headerParams": [],
                   "method": "GET",
                   "queryParams": []
@@ -1187,6 +1187,7 @@
               "placement": {
                 "height": 45,
                 "left": 22,
+                "rotation": 0,
                 "top": 24,
                 "width": 150
               },

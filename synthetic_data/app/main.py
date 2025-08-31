@@ -234,7 +234,7 @@ def main(n_customers: int, n_terminals: int, n_periods: int, period_length: int,
                             data=transactions.to_json(orient='records'), timeout=60)
     assert response.status_code == 200, response.text
   else:
-    send_table_on_time(api_url, transactions, "transactions/verify/")
+    send_table_on_time(api_url, transactions, "fraud_detection/transactions")
 
 if __name__ == "__main__":
   parser = argparse.ArgumentParser(description="Synthetic Data Generation")
