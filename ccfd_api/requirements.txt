@@ -6,5 +6,4 @@ scipy
 scikit-learn
 matplotlib
 pandas
-pydotplus
 apscheduler

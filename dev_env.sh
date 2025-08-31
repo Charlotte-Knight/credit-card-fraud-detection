@@ -10,7 +10,10 @@ else
   mv bin $env_dir
   export MAMBA_ROOT_PREFIX=$env_dir
   eval "$($env_dir/micromamba shell hook -s posix)"
-  cat fastapi/requirements.txt synthetic_data/requirements.txt > $env_dir/requirements.txt
+  echo "python=3.13" > $env_dir/requirements.txt
+  cat ccfd_api/requirements.txt transaction_generator/requirements.txt >> $env_dir/requirements.txt
+  echo ruff >> $env_dir/requirements.txt
+  echo pre-commit >> $env_dir/requirements.txt
   micromamba env create -n $env_name -f $env_dir/requirements.txt
   micromamba clean --all --yes
   micromamba activate $env_name

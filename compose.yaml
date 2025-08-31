@@ -31,23 +31,23 @@ services:
     ports:
       - 3000:3000
 
-  fastapi:
-    container_name: fastapi
+  ccfd_api:
+    container_name: ccfd_api
     depends_on:
       postgres:
         condition: service_healthy
         restart: true
-    build: ./fastapi
-    image: fastapi
+    build: ./ccfd_api
+    image: ccfd_api
     restart: on-failure
     ports:
       - 8000:8000
 
-  synthetic_data:
-    container_name: synthetic_data
-    build: ./synthetic_data
-    image: synthetic_data
+  transaction_generator:
+    container_name: transaction_generator
+    build: ./transaction_generator
+    image: transaction_generator
     depends_on:
-      fastapi:
+      ccfd_api:
         condition: service_healthy
         restart: true

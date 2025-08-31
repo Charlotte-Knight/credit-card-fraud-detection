@@ -356,7 +356,7 @@ if __name__ == "__main__":
   )
   parser.add_argument(
     "--api-url",
-    default=("http://fastapi:8000/", "http://localhost:8000/"),
+    default=("http://ccfd_api:8000/", "http://localhost:8000/"),
     nargs="+",
     type=str,
     help="API URL for the FastAPI app",
