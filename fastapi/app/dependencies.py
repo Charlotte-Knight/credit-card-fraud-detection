@@ -1,9 +1,19 @@
 from sqlmodel import SQLModel, Session, create_engine
 from typing import Annotated
 from fastapi import Depends
+import sqlalchemy
+from fastapi import logger
 
-engine = create_engine("postgresql://postgres:password@postgres/postgres")
-
+hosts = ["postgres", "localhost"]
+for host in hosts:
+  try:
+    engine = create_engine(f"postgresql://postgres:password@{host}/postgres")
+    with engine.connect() as conn:
+      conn.execute(sqlalchemy.text("SELECT 1"))
+    break
+  except:
+    pass
+  
 def create_db_and_tables():
   SQLModel.metadata.create_all(engine)
 
