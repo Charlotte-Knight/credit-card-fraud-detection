@@ -1020,6 +1020,8 @@
             }
           },
           "mappings": [],
+          "max": 1,
+          "min": 0,
           "thresholds": {
             "mode": "absolute",
             "steps": [

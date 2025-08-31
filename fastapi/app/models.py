@@ -1,9 +1,11 @@
 from sqlmodel import Field, SQLModel
 from datetime import datetime
 
+
 class Location(SQLModel):
   LocationX: float = Field(ge=0, le=100)
   LocationY: float = Field(ge=0, le=100)
+
 
 class TransactionCharacter(SQLModel):
   AmountMean: float = Field(ge=0)
@@ -14,9 +16,11 @@ class TransactionCharacter(SQLModel):
 class CustomerBase(Location, TransactionCharacter):
   pass
 
+
 class Customer(CustomerBase, table=True):
   CustomerID: int | None = Field(default=None, primary_key=True)
-  
+
+
 class CustomerPublic(CustomerBase):
   CustomerID: int
 
@@ -24,8 +28,10 @@ class CustomerPublic(CustomerBase):
 class TerminalBase(Location):
   pass
 
+
 class Terminal(TerminalBase, table=True):
   TerminalID: int | None = Field(default=None, primary_key=True)
+
 
 class TerminalPublic(TerminalBase):
   TerminalID: int
@@ -40,11 +46,14 @@ class TransactionBase(SQLModel):
   FraudScenario: int | None = None
   Accepted: bool | None = None
 
+
 class Transaction(TransactionBase, table=True):
   TransactionID: int | None = Field(default=None, primary_key=True)
 
+
 class TransactionPublic(TransactionBase):
   TransactionID: int
+
 
 class TransactionFeatures(SQLModel):
   Amount: float
@@ -66,8 +75,10 @@ class FraudBase(TransactionCharacter):
   EndTime: datetime
   FraudScenario: int = 0
 
+
 class Fraud(FraudBase, table=True):
   FraudID: int | None = Field(default=None, primary_key=True)
+
 
 class FraudPublic(FraudBase):
   FraudID: int
