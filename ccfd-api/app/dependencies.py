@@ -5,9 +5,10 @@ import sqlalchemy
 
 import time
 
+
 def get_engine(interval=5, retries=5):
   hosts = ["postgres", "localhost"]
-  
+
   for _ in range(retries):
     for host in hosts:
       try:
@@ -18,10 +19,12 @@ def get_engine(interval=5, retries=5):
       except Exception:
         continue
     time.sleep(interval)
-    
+
   raise ConnectionError("Could not connect to the database after several attempts")
 
+
 engine = get_engine()
+
 
 def create_db_and_tables():
   SQLModel.metadata.create_all(engine)
