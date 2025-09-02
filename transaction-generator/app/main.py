@@ -10,6 +10,8 @@ from typing import Callable
 from rich.logging import RichHandler
 from rich.traceback import install
 
+import time
+
 install()
 logging.basicConfig(
   level=logging.INFO,
@@ -241,6 +243,20 @@ def generate_send(
     df.set_index(ID_col, inplace=True)
   return df
 
+def get_api_url(api_urls):
+  for _ in range(5):
+    for url in api_urls:
+      try:
+        response = requests.get(url + "health/", timeout=5)
+        if response.status_code == 200:
+          logger.info("Connected to API at %s", url)
+          return url
+      except requests.exceptions.RequestException:
+        logger.info("Failed to connect to API at %s", url)
+        continue
+    time.sleep(5)
+  
+  raise ConnectionError("Could not connect to FastAPI at any known URL")
 
 def main(
   n_customers: int,
@@ -252,6 +268,8 @@ def main(
   dump: bool,
   api_url: str,
 ):
+  api_url = get_api_url(api_url)
+  
   np.random.seed(seed)
   if clear_database:
     delete_all_data(api_url)
@@ -356,24 +374,13 @@ if __name__ == "__main__":
   )
   parser.add_argument(
     "--api-url",
-    default=("http://ccfd_api:8000/", "http://localhost:8000/"),
+    default=("http://ccfd-api:8000/", "http://localhost:8000/"),
     nargs="+",
     type=str,
     help="API URL for the FastAPI app",
   )
 
   args = parser.parse_args()
-
-  api_url = None
-  for url in args.api_url:
-    try:
-      response = requests.get(url + "health/", timeout=5)
-      if response.status_code == 200:
-        api_url = url
-    except requests.exceptions.RequestException:
-      continue
-  if not api_url:
-    raise ConnectionError("Could not connect to FastAPI at any known URL")
 
   main(
     args.n_customers,
@@ -383,5 +390,5 @@ if __name__ == "__main__":
     args.clear_database,
     args.seed,
     args.dump,
-    api_url,
+    args.api_url,
   )
