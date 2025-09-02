@@ -37,6 +37,8 @@ jobs:
             type=semver,pattern={{version}}
             # Commit SHA
             type=sha
+            # set latest tag for default branch
+            type=raw,value=latest,enable={{is_default_branch}}
 
           flavor: |
             latest=auto   # Assign :latest if it's main branch or highest semver
@@ -49,3 +51,6 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=registry,ref=charlotteknight/${{ matrix.service }}:buildcache
+          cache-to: type=registry,ref=charlotteknight/${{ matrix.service }}:buildcache,mode=max
+
