@@ -243,6 +243,7 @@ def generate_send(
     df.set_index(ID_col, inplace=True)
   return df
 
+
 def get_api_url(api_urls):
   for _ in range(5):
     for url in api_urls:
@@ -255,8 +256,9 @@ def get_api_url(api_urls):
         logger.info("Failed to connect to API at %s", url)
         continue
     time.sleep(5)
-  
+
   raise ConnectionError("Could not connect to FastAPI at any known URL")
+
 
 def main(
   n_customers: int,
@@ -269,7 +271,7 @@ def main(
   api_url: str,
 ):
   api_url = get_api_url(api_url)
-  
+
   np.random.seed(seed)
   if clear_database:
     delete_all_data(api_url)
