@@ -24,30 +24,33 @@ services:
     container_name: grafana
     image: grafana/grafana-oss
     volumes:
-      - ./grafana/grafana-provisioning:/etc/grafana/provisioning
+      - ./grafana/provisioning/dashboards/ccfd.json:/etc/grafana/provisioning/dashboards/ccfd.json
+      - ./grafana/provisioning/dashboards/ccfd.yaml:/etc/grafana/provisioning/dashboards/ccfd.yaml
+      - ./grafana/provisioning/datasources/postgres.yaml:/etc/grafana/provisioning/datasources/postgres.yaml
+      - ./grafana/provisioning/datasources/prometheus.yaml:/etc/grafana/provisioning/datasources/prometheus.yaml
     environment:
       GF_AUTH_ANONYMOUS_ENABLED: "true"
       GF_SECURITY_ADMIN_PASSWORD: password
     ports:
       - 3000:3000
 
-  ccfd_api:
-    container_name: ccfd_api
-    depends_on:
-      postgres:
-        condition: service_healthy
-        restart: true
-    build: ./ccfd_api
-    image: ccfd_api
+  ccfd-api:
+    container_name: ccfd-api
+    # depends_on:
+    #   postgres:
+    #     condition: service_healthy
+    #     restart: true
+    build: ./ccfd-api
+    image: ccfd-api
     restart: on-failure
     ports:
       - 8000:8000
 
-  transaction_generator:
-    container_name: transaction_generator
-    build: ./transaction_generator
-    image: transaction_generator
-    depends_on:
-      ccfd_api:
-        condition: service_healthy
-        restart: true
+  transaction-generator:
+    container_name: transaction-generator
+    build: ./transaction-generator
+    image: transaction-generator
+    # depends_on:
+    #   ccfd-api:
+    #     condition: service_healthy
+    #     restart: true

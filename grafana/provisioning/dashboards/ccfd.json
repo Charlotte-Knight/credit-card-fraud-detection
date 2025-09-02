@@ -1134,7 +1134,7 @@
               "fixed": "transparent"
             },
             "image": {
-              "fixed": "http://localhost:8000/fraud_detection/tree/visualize",
+              "fixed": "http://ccfd-api:8000/fraud_detection/tree/visualize",
               "mode": "fixed"
             }
           },
