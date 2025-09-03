@@ -8,7 +8,7 @@ from .crud import get_crud_router
 from .fraud_detection import router as fraud_router
 
 from contextlib import asynccontextmanager
-from sqlmodel import text
+from sqlmodel import delete
 
 from fastapi.middleware.cors import CORSMiddleware
 from prometheus_fastapi_instrumentator import Instrumentator
@@ -55,10 +55,10 @@ def root():
 
 @app.delete("/delete_all_data")
 def delete_all_data(session: SessionDep):
-  session.exec(text("TRUNCATE TABLE Transaction CASCADE"))
-  session.exec(text("TRUNCATE TABLE Fraud CASCADE"))
-  session.exec(text("TRUNCATE TABLE Terminal CASCADE"))
-  session.exec(text("TRUNCATE TABLE Customer CASCADE"))
+  session.exec(delete(m.Transaction))
+  session.exec(delete(m.Fraud))
+  session.exec(delete(m.Terminal))
+  session.exec(delete(m.Customer))
   session.commit()
 
 
