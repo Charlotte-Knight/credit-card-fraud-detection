@@ -6,7 +6,7 @@ services:
     environment:
       POSTGRES_PASSWORD: password
     healthcheck:
-      test: pg_isready
+      test: ["CMD", "pg_isready", "-U", "postgres"]
       start_period: 10s
       start_interval: 1s
     ports:
@@ -38,10 +38,10 @@ services:
 
   ccfd-api:
     container_name: ccfd-api
-    # depends_on:
-    #   postgres:
-    #     condition: service_healthy
-    #     restart: true
+    depends_on:
+      postgres:
+        condition: service_healthy
+        restart: true
     build: ./ccfd-api
     image: ccfd-api
     restart: on-failure
