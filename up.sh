@@ -1,7 +1,8 @@
 # /usr/bin/env bash
 
+export GIT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
+
 docker compose down
-docker system prune --volumes -f
 docker compose up -d --build --force-recreate --remove-orphans
 
 xdg-open http://localhost:8000/docs >/dev/null 2>&1 &

@@ -43,7 +43,7 @@ services:
         condition: service_healthy
         restart: true
     build: ./ccfd-api
-    image: ccfd-api
+    image: charlotteknight/ccfd-api:${GIT_BRANCH}
     restart: on-failure
     ports:
       - 8000:8000
@@ -51,8 +51,4 @@ services:
   transaction-generator:
     container_name: transaction-generator
     build: ./transaction-generator
-    image: transaction-generator
-    # depends_on:
-    #   ccfd-api:
-    #     condition: service_healthy
-    #     restart: true
+    image: charlotteknight/transaction-generator:${GIT_BRANCH}
