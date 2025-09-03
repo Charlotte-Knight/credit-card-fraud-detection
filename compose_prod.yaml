@@ -1,0 +1,45 @@
+services:
+  postgres:
+    container_name: postgres
+    image: postgres
+    shm_size: 128mb
+    environment:
+      POSTGRES_PASSWORD: password
+    healthcheck:
+      test: pg_isready
+      start_period: 10s
+      start_interval: 1s
+    ports:
+      - 5432:5432
+
+  prometheus:
+    container_name: prometheus
+    image: prom/prometheus
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+    ports:
+      - 9090:9090
+
+  grafana:
+    container_name: grafana
+    image: grafana/grafana-oss
+    volumes:
+      - ./grafana/provisioning/dashboards/ccfd.json:/etc/grafana/provisioning/dashboards/ccfd.json
+      - ./grafana/provisioning/dashboards/ccfd.yaml:/etc/grafana/provisioning/dashboards/ccfd.yaml
+      - ./grafana/provisioning/datasources/postgres.yaml:/etc/grafana/provisioning/datasources/postgres.yaml
+      - ./grafana/provisioning/datasources/prometheus.yaml:/etc/grafana/provisioning/datasources/prometheus.yaml
+    environment:
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_SECURITY_ADMIN_PASSWORD: password
+    ports:
+      - 3000:3000
+
+  ccfd-api:
+    container_name: ccfd-api
+    image: charlotteknight/ccfd-api
+    ports:
+      - 8000:8000
+
+  transaction-generator:
+    container_name: transaction-generator
+    image: charlotteknight/transaction-generator
