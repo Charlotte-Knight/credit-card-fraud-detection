@@ -48,6 +48,11 @@ app.include_router(get_crud_router(m.Fraud, m.FraudBase, m.FraudPublic, "/frauds
 app.include_router(fraud_router)
 
 
+@app.get("/")
+def root():
+  return {"message": "Welcome to the Credit Card Fraud Detection API"}
+
+
 @app.delete("/delete_all_data")
 def delete_all_data(session: SessionDep):
   session.exec(text("TRUNCATE TABLE Transaction CASCADE"))

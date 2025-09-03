@@ -28,9 +28,11 @@ services:
       - ./grafana/provisioning/dashboards/ccfd.yaml:/etc/grafana/provisioning/dashboards/ccfd.yaml
       - ./grafana/provisioning/datasources/postgres.yaml:/etc/grafana/provisioning/datasources/postgres.yaml
       - ./grafana/provisioning/datasources/prometheus.yaml:/etc/grafana/provisioning/datasources/prometheus.yaml
+      - ./grafana/provisioning/datasources/json-api.yaml:/etc/grafana/provisioning/datasources/json-api.yaml
     environment:
       GF_AUTH_ANONYMOUS_ENABLED: "true"
       GF_SECURITY_ADMIN_PASSWORD: password
+      GF_INSTALL_PLUGINS: "marcusolsson-json-datasource"
     ports:
       - 3000:3000
 
