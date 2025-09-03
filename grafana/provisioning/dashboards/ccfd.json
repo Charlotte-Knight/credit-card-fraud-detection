@@ -1091,30 +1091,8 @@
       "type": "row"
     },
     {
-      "datasource": {
-        "type": "grafana-postgresql-datasource",
-        "uid": "postgres"
-      },
       "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": 0
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          }
-        },
+        "defaults": {},
         "overrides": []
       },
       "gridPos": {
@@ -1123,99 +1101,19 @@
         "x": 0,
         "y": 30
       },
-      "id": 13,
+      "id": 18,
       "options": {
-        "infinitePan": false,
-        "inlineEditing": false,
-        "panZoom": false,
-        "root": {
-          "background": {
-            "color": {
-              "fixed": "transparent"
-            },
-            "image": {
-              "fixed": "http://ccfd-api:8000/fraud_detection/tree/visualize",
-              "mode": "fixed"
-            }
-          },
-          "border": {
-            "color": {
-              "fixed": "dark-green"
-            }
-          },
-          "constraint": {
-            "horizontal": "left",
-            "vertical": "top"
-          },
-          "elements": [
-            {
-              "background": {
-                "color": {
-                  "fixed": "transparent"
-                }
-              },
-              "border": {
-                "color": {
-                  "fixed": "dark-green"
-                }
-              },
-              "config": {
-                "align": "center",
-                "api": {
-                  "contentType": "application/json",
-                  "data": "{}",
-                  "endpoint": "http://localhost:8000/fraud_detection/train",
-                  "headerParams": [],
-                  "method": "GET",
-                  "queryParams": []
-                },
-                "color": {
-                  "fixed": "#F0F4FD"
-                },
-                "size": 14,
-                "style": {
-                  "variant": "primary"
-                },
-                "text": {
-                  "fixed": "Train",
-                  "mode": "fixed"
-                }
-              },
-              "constraint": {
-                "horizontal": "left",
-                "vertical": "top"
-              },
-              "name": "Train",
-              "placement": {
-                "height": 45,
-                "left": 22,
-                "rotation": 0,
-                "top": 24,
-                "width": 150
-              },
-              "type": "button"
-            }
-          ],
-          "name": "Element 1756292198878",
-          "placement": {
-            "height": 100,
-            "left": 0,
-            "rotation": 0,
-            "top": 0,
-            "width": 100
-          },
-          "type": "frame"
+        "code": {
+          "language": "plaintext",
+          "showLineNumbers": false,
+          "showMiniMap": false
         },
-        "showAdvancedTypes": true
+        "content": "<img src=\"/api/datasources/proxy/uid/json-api/fraud_detection/tree/visualize?t=${__from}\"\n",
+        "mode": "html"
       },
       "pluginVersion": "12.1.1",
-      "targets": [
-        {
-          "refId": "A"
-        }
-      ],
-      "title": "Decision Tree",
-      "type": "canvas"
+      "title": "Decision Tree (Now)",
+      "type": "text"
     },
     {
       "datasource": {
