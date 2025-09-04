@@ -106,7 +106,7 @@ def generate_frauds(
   fraud_rate = len(players) * fraud_rate_fraction
 
   time_windows = generate_time_windows(fraud_rate, time_info)
-  characters = generate_transaction_characters(len(time_windows), (5, 20), (1, 4))
+  characters = generate_transaction_characters(len(time_windows), (0.1, 10), (1, 4))
 
   frauds = time_windows.join(characters)
   frauds[players.index.name] = np.random.choice(players.index, len(frauds))
@@ -351,14 +351,14 @@ if __name__ == "__main__":
     "--n-periods",
     "-n",
     type=int,
-    default=10,
+    default=20,
     help="Number of periods to generate transactions for",
   )
   parser.add_argument(
     "--period-length",
     "-l",
     type=int,
-    default=2,
+    default=1,
     help="Length of a period in minutes",
   )
   parser.add_argument(
