@@ -20,7 +20,6 @@ def get_crud_router(
     db_item = model.model_validate(item)
     session.add(db_item)
     session.commit()
-    session.refresh(db_item)
     return db_item
 
   @router.post(
@@ -30,8 +29,6 @@ def get_crud_router(
     db_items = [model.model_validate(item) for item in items]
     session.add_all(db_items)
     session.commit()
-    for db_item in db_items:
-      session.refresh(db_item)
     return db_items
 
   @router.get("/{item_id}", response_model=model_public)
@@ -54,7 +51,6 @@ def get_crud_router(
     db_items = [model.model_validate(item) for item in items]
     session.add_all(db_items)
     session.commit()
-    db_items = session.exec(select(model)).all()
     return db_items
 
   return router

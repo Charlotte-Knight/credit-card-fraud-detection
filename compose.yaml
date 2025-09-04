@@ -11,6 +11,20 @@ services:
       start_interval: 1s
     ports:
       - 5432:5432
+    volumes:
+      - ./postgresql.conf:/etc/postgresql/postgresql.conf
+      - ./postgres-init:/docker-entrypoint-initdb.d
+    command: postgres -c config_file=/etc/postgresql/postgresql.conf
+
+  postgres-exporter:
+    image: prometheuscommunity/postgres-exporter
+    environment:
+      DATA_SOURCE_NAME: "postgresql://postgres:password@postgres/postgres?sslmode=disable"
+      PG_EXPORTER_EXTEND_QUERY_PATH: "/etc/postgres_exporter/queries.yaml"
+    ports:
+      - "9187:9187"
+    volumes:
+      - ./queries.yaml:/etc/postgres_exporter/queries.yaml
 
   prometheus:
     container_name: prometheus
@@ -37,7 +51,7 @@ services:
       - 3000:3000
 
   ccfd-api:
-    container_name: ccfd-api
+    #container_name: ccfd-api
     depends_on:
       postgres:
         condition: service_healthy
@@ -45,10 +59,18 @@ services:
     build: ./ccfd-api
     image: charlotteknight/ccfd-api:${GIT_BRANCH}
     restart: on-failure
+
     ports:
-      - 8000:8000
+      - "8000-8008:8000"
+
+    deploy:
+      mode: replicated
+      replicas: 1
+      endpoint_mode: vip
 
   transaction-generator:
-    container_name: transaction-generator
+    #container_name: transaction-generator
     build: ./transaction-generator
     image: charlotteknight/transaction-generator:${GIT_BRANCH}
+    deploy:
+      replicas: 1
