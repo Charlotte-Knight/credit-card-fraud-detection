@@ -3,7 +3,7 @@ global:
 scrape_configs:
   - job_name: 'ccfd-api'
     static_configs:
-      - targets: ['credit-card-fraud-detection-ccfd-api-1:8000', 'credit-card-fraud-detection-ccfd-api-2:8000', 'credit-card-fraud-detection-ccfd-api-3:8000', 'credit-card-fraud-detection-ccfd-api-4:8000']
+      - targets: ['ccfd-api:8000']
   - job_name: 'postgres'
     static_configs:
       - targets: ['postgres-exporter:9187']

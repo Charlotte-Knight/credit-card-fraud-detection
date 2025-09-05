@@ -52,26 +52,27 @@ services:
       - 3000:3000
 
   ccfd-api:
-    #container_name: ccfd-api
-    depends_on:
-      postgres:
-        condition: service_healthy
-        restart: true
     build: ./ccfd-api
     image: charlotteknight/ccfd-api:${GIT_BRANCH}
-    restart: on-failure
-
-    ports:
-      - "8000-8008:8000"
-
+    expose:
+      - 8000
     deploy:
       mode: replicated
-      replicas: 2
-      endpoint_mode: dnsrr
+      replicas: 1
+      endpoint_mode: vip
+      resources:
+        limits:
+          cpus: 1.0
+        reservations:
+          cpus: 1.0
+    labels:
+      kompose.hpa.cpu: 80
+      kompose.hpa.replicas.min: 1
+      kompose.hpa.replicas.max: 5
+
 
   transaction-generator:
-    #container_name: transaction-generator
     build: ./transaction-generator
     image: charlotteknight/transaction-generator:${GIT_BRANCH}
     deploy:
-      replicas: 2
+      replicas: 4
