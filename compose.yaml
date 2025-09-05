@@ -40,6 +40,7 @@ services:
     volumes:
       - ./grafana/provisioning/dashboards/ccfd.json:/etc/grafana/provisioning/dashboards/ccfd.json
       - ./grafana/provisioning/dashboards/ccfd.yaml:/etc/grafana/provisioning/dashboards/ccfd.yaml
+      - ./grafana/provisioning/dashboards/db.json:/etc/grafana/provisioning/dashboards/db.json
       - ./grafana/provisioning/datasources/postgres.yaml:/etc/grafana/provisioning/datasources/postgres.yaml
       - ./grafana/provisioning/datasources/prometheus.yaml:/etc/grafana/provisioning/datasources/prometheus.yaml
       - ./grafana/provisioning/datasources/json-api.yaml:/etc/grafana/provisioning/datasources/json-api.yaml
@@ -65,8 +66,8 @@ services:
 
     deploy:
       mode: replicated
-      replicas: 1
-      endpoint_mode: vip
+      replicas: 2
+      endpoint_mode: dnsrr
 
   transaction-generator:
     #container_name: transaction-generator

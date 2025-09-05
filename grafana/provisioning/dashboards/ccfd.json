@@ -1044,7 +1044,7 @@
           "editorMode": "code",
           "expr": "rate(process_cpu_seconds_total[15s])",
           "instant": false,
-          "legendFormat": "__auto",
+          "legendFormat": "{{instance}}",
           "range": true,
           "refId": "A"
         }
@@ -1369,7 +1369,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "rate(feature_importance_sum[1m]) / rate(feature_importance_count[1m])",
+          "expr": "avg by(feature_name) (rate(feature_importance_sum[1m]) / rate(feature_importance_count[1m]))",
           "instant": false,
           "legendFormat": "{{feature_name}}",
           "range": true,
@@ -1468,7 +1468,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "rate(model_training_duration_seconds_sum[1m]) / rate(model_training_duration_seconds_count[1m])",
+          "expr": "avg by(job) (rate(model_training_duration_seconds_sum[1m]) / rate(model_training_duration_seconds_count[1m]))",
           "instant": false,
           "legendFormat": "__auto",
           "range": true,
@@ -1707,5 +1707,5 @@
   "timezone": "browser",
   "title": "ccfd",
   "uid": "ccfd",
-  "version": 1
+  "version": 2
 }

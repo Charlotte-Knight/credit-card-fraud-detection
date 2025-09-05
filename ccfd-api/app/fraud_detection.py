@@ -117,9 +117,10 @@ def train_model(session: SessionDep) -> float | None:
   features.fillna(0, inplace=True)
   X = features[feature_names]
   y = features["Fraud"]
-  tree = sklearn.tree.DecisionTreeClassifier(max_depth=3)
+  tree = sklearn.tree.DecisionTreeClassifier(max_depth=3, class_weight="balanced")
   tree.fit(X, y)
   trees.append(tree)
+  del trees[:-1]
   plot_tree()
   score = tree.score(X, y)
 
@@ -151,6 +152,7 @@ def tree_predict(transaction_id: int, session: SessionDep) -> bool:
   X = pd.DataFrame([transaction_details])[feature_names]
   try:
     return trees[-1].predict(X)[0]
+    #return trees[-1].predict_proba(X)[0][1] > 0.9
   except Exception:
     return False
 
