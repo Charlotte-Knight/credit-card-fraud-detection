@@ -152,7 +152,7 @@ def tree_predict(transaction_id: int, session: SessionDep) -> bool:
   X = pd.DataFrame([transaction_details])[feature_names]
   try:
     return trees[-1].predict(X)[0]
-    #return trees[-1].predict_proba(X)[0][1] > 0.9
+    # return trees[-1].predict_proba(X)[0][1] > 0.9
   except Exception:
     return False
 
