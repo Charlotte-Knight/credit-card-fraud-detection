@@ -1,0 +1,54 @@
+pg_stat_statements:
+  query: |
+    SELECT 
+      queryid,
+      query,
+      calls,
+      total_exec_time as total_time,
+      mean_exec_time as mean_time,
+      stddev_exec_time as stddev_time,
+      rows,
+      100.0 * shared_blks_hit / nullif(shared_blks_hit + shared_blks_read, 0) AS hit_percent,
+      shared_blks_hit,
+      shared_blks_read,
+      shared_blks_dirtied,
+      shared_blks_written,
+      local_blks_hit,
+      local_blks_read,
+      temp_blks_read,
+      temp_blks_written
+    FROM pg_stat_statements 
+    WHERE query NOT LIKE '%pg_stat_statements%'
+    ORDER BY total_exec_time DESC
+    LIMIT 10
+  metrics:
+    - queryid:
+        usage: "LABEL"
+        description: "Query ID"
+    - query:
+        usage: "LABEL" 
+        description: "Query text (truncated)"
+    - calls:
+        usage: "COUNTER"
+        description: "Number of times executed"
+    - total_time:
+        usage: "COUNTER"
+        description: "Total time spent in the statement, in milliseconds"
+    - mean_time:
+        usage: "GAUGE"
+        description: "Mean time spent in the statement, in milliseconds"
+    - stddev_time:
+        usage: "GAUGE"
+        description: "Standard deviation of time spent in the statement"
+    - rows:
+        usage: "COUNTER"
+        description: "Total number of rows retrieved or affected"
+    - hit_percent:
+        usage: "GAUGE"
+        description: "Percentage of shared block hits"
+    - shared_blks_hit:
+        usage: "COUNTER"
+        description: "Total number of shared block cache hits"
+    - shared_blks_read:
+        usage: "COUNTER"
+        description: "Total number of shared blocks read from disk"

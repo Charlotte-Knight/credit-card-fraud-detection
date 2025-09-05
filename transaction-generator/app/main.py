@@ -41,7 +41,7 @@ def generate_locations(n: int, r: tuple[float, float] = (0, 100)) -> pd.DataFram
 def generate_transaction_characters(
   n: int,
   amount_mean: tuple[float, float] = (0.1, 10),
-  tx_rate: tuple[float, float] = (0.5, 2),
+  tx_rate: tuple[float, float] = (1, 5),
 ) -> pd.DataFrame:
   characters = {
     "AmountMean": np.random.uniform(amount_mean[0], amount_mean[1], n),
@@ -62,7 +62,7 @@ def generate_times(rate: float, time_info: TimeInfo) -> pd.DatetimeIndex:
 
 
 def generate_time_windows(
-  rate: float, time_info: TimeInfo, duration: tuple[float, float] = (0.1, 10)
+  rate: float, time_info: TimeInfo, duration: tuple[float, float] = (1, 5)
 ) -> pd.DataFrame:
   start_times = generate_times(rate, time_info)
   durations = (
@@ -106,7 +106,7 @@ def generate_frauds(
   fraud_rate = len(players) * fraud_rate_fraction
 
   time_windows = generate_time_windows(fraud_rate, time_info)
-  characters = generate_transaction_characters(len(time_windows), (5, 20), (1, 4))
+  characters = generate_transaction_characters(len(time_windows), (1, 10), (2, 10))
 
   frauds = time_windows.join(characters)
   frauds[players.index.name] = np.random.choice(players.index, len(frauds))
@@ -337,28 +337,28 @@ if __name__ == "__main__":
     "--n-customers",
     "-c",
     type=int,
-    default=5000,
+    default=2000,
     help="Number of new customers to generate",
   )
   parser.add_argument(
     "--n-terminals",
     "-t",
     type=int,
-    default=5000,
+    default=2000,
     help="Number of new terminals to generate",
   )
   parser.add_argument(
     "--n-periods",
     "-n",
     type=int,
-    default=10,
+    default=20,
     help="Number of periods to generate transactions for",
   )
   parser.add_argument(
     "--period-length",
     "-l",
     type=int,
-    default=2,
+    default=1,
     help="Length of a period in minutes",
   )
   parser.add_argument(

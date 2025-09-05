@@ -2,8 +2,7 @@
 
 export GIT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
 
-docker compose down
-docker compose up -d --build --force-recreate --remove-orphans
+docker compose up -d --build --force-recreate --remove-orphans -V
 
 xdg-open http://localhost:8000/docs >/dev/null 2>&1 &
 xdg-open http://localhost:3000/d/ccfd/ccfd >/dev/null 2>&1 &

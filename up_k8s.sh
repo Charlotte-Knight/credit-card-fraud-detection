@@ -8,7 +8,8 @@ rm k8s/*
 kompose convert -o k8s/
 
 minikube delete
-minikube start --driver=docker
+minikube start --driver=docker --cpus="no-limit"
+minikube addons enable metrics-server
 
 kubectl apply -f k8s/
 

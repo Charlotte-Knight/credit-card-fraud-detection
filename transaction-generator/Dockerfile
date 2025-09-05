@@ -6,4 +6,4 @@ RUN micromamba install -y -n base -f /tmp/env.yaml && \
 
 COPY ./app ./app
 
-CMD ["python", "app/main.py", "--clear-data"]
+CMD ["python", "app/main.py"]

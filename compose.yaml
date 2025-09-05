@@ -11,6 +11,20 @@ services:
       start_interval: 1s
     ports:
       - 5432:5432
+    volumes:
+      - ./postgresql.conf:/etc/postgresql/postgresql.conf
+      - ./postgres-init:/docker-entrypoint-initdb.d
+    command: postgres -c config_file=/etc/postgresql/postgresql.conf
+
+  postgres-exporter:
+    image: prometheuscommunity/postgres-exporter
+    environment:
+      DATA_SOURCE_NAME: "postgresql://postgres:password@postgres/postgres?sslmode=disable"
+      PG_EXPORTER_EXTEND_QUERY_PATH: "/etc/postgres_exporter/queries.yaml"
+    ports:
+      - "9187:9187"
+    volumes:
+      - ./queries.yaml:/etc/postgres_exporter/queries.yaml
 
   prometheus:
     container_name: prometheus
@@ -26,6 +40,7 @@ services:
     volumes:
       - ./grafana/provisioning/dashboards/ccfd.json:/etc/grafana/provisioning/dashboards/ccfd.json
       - ./grafana/provisioning/dashboards/ccfd.yaml:/etc/grafana/provisioning/dashboards/ccfd.yaml
+      - ./grafana/provisioning/dashboards/db.json:/etc/grafana/provisioning/dashboards/db.json
       - ./grafana/provisioning/datasources/postgres.yaml:/etc/grafana/provisioning/datasources/postgres.yaml
       - ./grafana/provisioning/datasources/prometheus.yaml:/etc/grafana/provisioning/datasources/prometheus.yaml
       - ./grafana/provisioning/datasources/json-api.yaml:/etc/grafana/provisioning/datasources/json-api.yaml
@@ -37,18 +52,27 @@ services:
       - 3000:3000
 
   ccfd-api:
-    container_name: ccfd-api
-    depends_on:
-      postgres:
-        condition: service_healthy
-        restart: true
     build: ./ccfd-api
     image: charlotteknight/ccfd-api:${GIT_BRANCH}
-    restart: on-failure
-    ports:
-      - 8000:8000
+    expose:
+      - 8000
+    deploy:
+      mode: replicated
+      replicas: 1
+      endpoint_mode: vip
+      resources:
+        limits:
+          cpus: 1.0
+        reservations:
+          cpus: 1.0
+    labels:
+      kompose.hpa.cpu: 80
+      kompose.hpa.replicas.min: 1
+      kompose.hpa.replicas.max: 5
+
 
   transaction-generator:
-    container_name: transaction-generator
     build: ./transaction-generator
     image: charlotteknight/transaction-generator:${GIT_BRANCH}
+    deploy:
+      replicas: 2

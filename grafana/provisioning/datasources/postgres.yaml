@@ -11,3 +11,4 @@ datasources:
     jsonData:
       database: postgres
       sslmode: 'disable' # disable/require/verify-ca/verify-full
+    isDefault: true
