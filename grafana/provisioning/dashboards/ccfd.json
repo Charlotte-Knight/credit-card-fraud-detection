@@ -746,7 +746,7 @@
       },
       "id": 7,
       "panels": [],
-      "title": "API",
+      "title": "API (averages* over workers)",
       "type": "row"
     },
     {
@@ -838,12 +838,12 @@
             "uid": "prometheus"
           },
           "disableTextWrap": false,
-          "editorMode": "builder",
-          "expr": "sum by(handler) (rate(http_requests_total[$__rate_interval]))",
+          "editorMode": "code",
+          "expr": "rate(http_requests_total[$__rate_interval])",
           "fullMetaSearch": false,
           "includeNullMetadata": true,
           "instant": false,
-          "legendFormat": "__auto",
+          "legendFormat": "{{handler}}",
           "range": true,
           "refId": "A",
           "useBackend": false
@@ -941,7 +941,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "avg by(handler) (rate(http_request_duration_seconds_sum[1m]) / rate(http_request_duration_seconds_count[1m]))",
+          "expr": "rate(http_request_duration_seconds_sum[1m]) / rate(http_request_duration_seconds_count[1m])",
           "instant": false,
           "legendFormat": "__auto",
           "range": true,
@@ -1707,5 +1707,5 @@
   "timezone": "browser",
   "title": "ccfd",
   "uid": "ccfd",
-  "version": 2
+  "version": 1
 }
