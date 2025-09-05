@@ -75,4 +75,4 @@ services:
     build: ./transaction-generator
     image: charlotteknight/transaction-generator:${GIT_BRANCH}
     deploy:
-      replicas: 4
+      replicas: 2

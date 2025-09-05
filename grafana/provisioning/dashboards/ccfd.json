@@ -943,7 +943,7 @@
           "editorMode": "code",
           "expr": "rate(http_request_duration_seconds_sum[1m]) / rate(http_request_duration_seconds_count[1m])",
           "instant": false,
-          "legendFormat": "__auto",
+          "legendFormat": "{{handler}}",
           "range": true,
           "refId": "A"
         }
@@ -1581,7 +1581,7 @@
           "editorMode": "builder",
           "expr": "pg_stat_statements_mean_time",
           "instant": false,
-          "legendFormat": "__auto",
+          "legendFormat": "{{query}}",
           "range": true,
           "refId": "A"
         }
@@ -1682,7 +1682,7 @@
           "fullMetaSearch": false,
           "includeNullMetadata": true,
           "instant": false,
-          "legendFormat": "__auto",
+          "legendFormat": "{{query}}",
           "range": true,
           "refId": "A",
           "useBackend": false
